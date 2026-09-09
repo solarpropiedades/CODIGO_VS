@@ -36,6 +36,19 @@
           justify-content: center !important;
           text-align: center !important;
         }
+        /* Modal de imagenes: los botones venian verde-sobre-verde y no se leian.
+           Se fuerza el contraste sin depender de las clases de Decap (son generadas). */
+        [class*="MediaLibrary"] button,
+        [class*="media-library"] button,
+        div[role="dialog"] button {
+          color: #fff !important;
+        }
+        [class*="MediaLibrary"] button *,
+        [class*="media-library"] button *,
+        div[role="dialog"] button * {
+          color: inherit !important;
+        }
+
         [data-testid="new-button"]:hover {
           background: #c9650d !important;
           background-color: #c9650d !important;
@@ -166,7 +179,9 @@
         /^descargar$/i, /^download$/i,
         /eliminar selecci[óo]n/i, /delete selected/i
       ];
-      Array.from(document.querySelectorAll('button, a, [role="button"]')).forEach(function(b) {
+      Array.from(document.querySelectorAll(
+        'button, a, label, [role="button"], [class*="utton"]'
+      )).forEach(function(b) {
         var t = (b.textContent || '').trim();
         if (!t || t.length > 30) return;
         if (OCULTAR.some(function(re) { return re.test(t); })) {
@@ -175,14 +190,18 @@
       });
 
       /* Botones de acción en NARANJA con letra blanca (antes eran azul/verde sobre
-         fondo oscuro y no se leían). */
+         fondo oscuro y no se leían).
+         El selector es amplio a proposito: Decap arma algunos de estos botones como
+         <label> o <div>, no como <button>, y por eso antes se escapaban. */
       var PRINCIPALES = [
-        /^subir nuevo$/i, /^upload$/i, /^subir$/i,
+        /subir nuevo/i, /^upload$/i, /^subir$/i,
         /elige una imagen/i, /choose an image/i, /^elegir imagen$/i,
         /confirmar selecci[óo]n/i, /choose selected/i
       ];
-      Array.from(document.querySelectorAll('button, a, [role="button"]')).forEach(function(b) {
-        var t = (b.textContent || '').trim();
+      Array.from(document.querySelectorAll(
+        'button, a, label, [role="button"], input[type="submit"], [class*="utton"]'
+      )).forEach(function(b) {
+        var t = (b.textContent || b.value || '').trim();
         if (!t || t.length > 30) return;
         if (!PRINCIPALES.some(function(re) { return re.test(t); })) return;
         b.style.setProperty('background', A, 'important');

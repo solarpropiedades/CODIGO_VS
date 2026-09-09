@@ -175,6 +175,10 @@ collections:
         widget: image
         multiple: true
         required: false
+        # default [] fuerza a Decap a tratar el campo como LISTA desde el principio.
+        # Sin esto, al subir UNA sola foto guardaba un texto suelto en vez de una lista
+        # y despues no dejaba agregar mas (bug conocido de Decap, issue #5812).
+        default: []
         hint: "Podés seleccionar/arrastrar varias fotos a la vez. La primera es la principal."
 
       - label: "Link Reel / Video"
@@ -201,7 +205,7 @@ collections:
             name: valor_dolar
             widget: number
             value_type: float
-            required: true
+            required: false
             min: 0
             hint: "Cuántos pesos vale 1 dólar (ej: 1350). Se usa para convertir precios entre USD y ARS en las búsquedas."
 
