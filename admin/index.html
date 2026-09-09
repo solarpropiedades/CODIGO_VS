@@ -86,7 +86,9 @@
         .then(function(r) { return r.ok ? r.text() : Promise.reject(); })
         .then(function(txt) {
           propCache[slug] = {
-            foto: ((txt.match(/fotos:\s*\n\s*-\s*(\S+)/) || [])[1] || '').trim(),
+            // Decap guarda 'fotos' como lista si hay varias y como texto si hay una sola
+            foto: ((txt.match(/fotos:\s*\n\s*-\s*(\S+)/)
+                 || txt.match(/^fotos:[ \t]+(\S+)[ \t]*$/m) || [])[1] || '').trim(),
             tipo: ((txt.match(/^tipo:\s*(.+)$/m) || [])[1] || '').trim().replace(/^["']|["']$/g, '')
           };
           cb(propCache[slug]);
@@ -305,8 +307,11 @@
         var getAsset = this.props.getAsset;
         var get = function (k) { var v = data.get(k); return v == null ? '' : v; };
 
+        // Con varias fotos Decap devuelve una lista Immutable; con UNA sola, un string
         var fotos = data.get('fotos');
-        var fotoPath = fotos && fotos.size ? fotos.get(0) : null;
+        var fotoPath = null;
+        if (fotos && typeof fotos.size === 'number') fotoPath = fotos.size ? fotos.get(0) : null;
+        else if (typeof fotos === 'string' && fotos.trim()) fotoPath = fotos.trim();
         var tipo = get('tipo');
         var ubic = [get('zona'), get('localidad')].filter(Boolean).join(' · ');
 

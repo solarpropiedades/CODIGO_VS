@@ -1232,6 +1232,18 @@
     });
   }
 
+
+  // Decap guarda 'fotos' como TEXTO cuando hay una sola imagen y como LISTA cuando hay
+  // varias. El sitio esperaba siempre lista, asi que con una sola foto no mostraba
+  // ninguna (peor: p.fotos[0] devolvia '/', el primer caracter del texto).
+  // Este helper normaliza los dos formatos a un array.
+  function fotosDe(p) {
+    var f = p && p.fotos;
+    if (Array.isArray(f)) return f.filter(Boolean);
+    if (typeof f === 'string' && f.trim()) return [f.trim()];
+    return [];
+  }
+
   function catalogoAProps(d) {
     return d.propiedades.map(function(x) {
       var p = parseYAML(x.raw);
@@ -1408,7 +1420,8 @@
   }
 
   function renderCard(p, i) {
-    var foto = p.fotos && p.fotos.length ? p.fotos[0] : null;
+    var fs = fotosDe(p);
+    var foto = fs.length ? fs[0] : null;
     var imgHtml = foto
       ? '<img src="' + foto + '" alt="' + (p.titulo || '') + '" loading="lazy" onerror="imgFallback(this)"/>'
       : '<div class="prop-card-no-img"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
@@ -1791,7 +1804,7 @@
       // Galería
       var mainEl   = document.getElementById('galleryMain');
       var thumbsEl = document.getElementById('galleryThumbs');
-      var rawFotos = p.fotos && p.fotos.length ? p.fotos : [];
+      var rawFotos = fotosDe(p);
 
       // Solo se arma la galería con las fotos que realmente cargan (ver keepValidImages).
       keepValidImages(rawFotos, function(fotos) {

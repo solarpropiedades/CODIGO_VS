@@ -118,7 +118,9 @@ function armarDescripcion(p) {
 }
 
 function primeraFoto(p) {
-  const f = Array.isArray(p.fotos) ? p.fotos.filter(Boolean) : [];
+  // Decap guarda 'fotos' como texto si hay una sola imagen y como lista si hay varias
+  const f = Array.isArray(p.fotos) ? p.fotos.filter(Boolean)
+          : (typeof p.fotos === 'string' && p.fotos.trim() ? [p.fotos.trim()] : []);
   if (!f.length) return IMG_FALLBACK;
   const src = String(f[0]).trim();
   if (/^https?:\/\//i.test(src)) return src;
