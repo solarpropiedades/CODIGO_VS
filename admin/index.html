@@ -156,17 +156,56 @@
       Array.from(document.querySelectorAll('input[type="file"]')).forEach(function(inp) {
         inp.setAttribute('multiple', 'multiple'); inp.multiple = true;
       });
-      /* Solo el botón "Subir nuevo" en NARANJA (el resto queda como está) */
+      /* ---- Limpieza del selector de imágenes ----
+         Decap muestra muchos botones que Antonella no necesita y que solo confunden
+         (subir por URL, copiar la ruta, descargar, borrar del repo). Se ocultan y se
+         deja UNO principal bien visible: "Subir nuevo". */
+      var OCULTAR = [
+        /reemplazar con url/i, /replace with url/i, /insertar desde url/i, /insert from url/i,
+        /^copy$/i, /^copiar$/i,
+        /^descargar$/i, /^download$/i,
+        /eliminar selecci[óo]n/i, /delete selected/i
+      ];
       Array.from(document.querySelectorAll('button, a, [role="button"]')).forEach(function(b) {
         var t = (b.textContent || '').trim();
-        if (/^subir nuevo$/i.test(t) || /^upload$/i.test(t)) {
-          b.style.setProperty('background', A, 'important');
-          b.style.setProperty('background-color', A, 'important');
-          b.style.setProperty('border-color', A, 'important');
-          b.style.setProperty('color', '#fff', 'important');
-          b.style.setProperty('font-weight', '700', 'important');
-          b.style.setProperty('border-radius', '8px', 'important');
+        if (!t || t.length > 30) return;
+        if (OCULTAR.some(function(re) { return re.test(t); })) {
+          b.style.setProperty('display', 'none', 'important');
         }
+      });
+
+      /* Botones de acción en NARANJA con letra blanca (antes eran azul/verde sobre
+         fondo oscuro y no se leían). */
+      var PRINCIPALES = [
+        /^subir nuevo$/i, /^upload$/i, /^subir$/i,
+        /elige una imagen/i, /choose an image/i, /^elegir imagen$/i,
+        /confirmar selecci[óo]n/i, /choose selected/i
+      ];
+      Array.from(document.querySelectorAll('button, a, [role="button"]')).forEach(function(b) {
+        var t = (b.textContent || '').trim();
+        if (!t || t.length > 30) return;
+        if (!PRINCIPALES.some(function(re) { return re.test(t); })) return;
+        b.style.setProperty('background', A, 'important');
+        b.style.setProperty('background-color', A, 'important');
+        b.style.setProperty('border', 'none', 'important');
+        b.style.setProperty('color', '#fff', 'important');
+        b.style.setProperty('font-weight', '700', 'important');
+        b.style.setProperty('border-radius', '8px', 'important');
+        b.style.setProperty('text-shadow', 'none', 'important');
+        b.style.setProperty('opacity', '1', 'important');
+        /* Decap a veces pinta el texto en un <span> hijo: se fuerza ahí también */
+        Array.from(b.querySelectorAll('*')).forEach(function(c) {
+          c.style.setProperty('color', '#fff', 'important');
+        });
+      });
+
+      /* "Quita la imagen": que se lea, pero discreto (es una acción destructiva) */
+      Array.from(document.querySelectorAll('button, a, [role="button"]')).forEach(function(b) {
+        var t = (b.textContent || '').trim();
+        if (!/quita la imagen/i.test(t) && !/remove image/i.test(t)) return;
+        b.style.setProperty('background', 'transparent', 'important');
+        b.style.setProperty('color', '#b3261e', 'important');
+        b.style.setProperty('font-weight', '600', 'important');
       });
 
       /* Botón naranja */
