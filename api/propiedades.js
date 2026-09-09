@@ -27,6 +27,20 @@ function ghHeaders() {
   return h;
 }
 
+// raw.githubusercontent devuelve 503 esporadicos. Sin reintento, una propiedad
+// desaparecia del catalogo por un hipo del CDN.
+async function fetchTexto(url, intentos = 3) {
+  for (let i = 0; i < intentos; i++) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) return await r.text();
+      if (r.status === 404) return null;          // no existe: no tiene sentido reintentar
+    } catch (e) { /* error de red: se reintenta */ }
+    if (i < intentos - 1) await new Promise(r => setTimeout(r, 300));
+  }
+  return null;
+}
+
 export default async function handler(req, res) {
   try {
     // 1. Listar los .md de la carpeta de propiedades
@@ -37,21 +51,15 @@ export default async function handler(req, res) {
     // 2. Bajar cada .md. Se pide a raw.githubusercontent, que es un CDN y NO gasta
     //    la cuota de la API, asi que tener 5 o 50 propiedades da igual.
     const propiedades = (await Promise.all(archivos.map(async f => {
-      try {
-        const r = await fetch(`${RAW}/content/propiedades/${encodeURIComponent(f.name)}`);
-        if (!r.ok) return null;
-        return { slug: f.name.replace(/\.md$/, ''), raw: await r.text() };
-      } catch (e) {
-        return null;   // una propiedad que falla no tira abajo el catalogo entero
-      }
+      const txt = await fetchTexto(`${RAW}/content/propiedades/${encodeURIComponent(f.name)}`);
+      if (!txt) return null;   // una propiedad que falla no tira abajo el catalogo entero
+      return { slug: f.name.replace(/\.md$/, ''), raw: txt };
     }))).filter(Boolean);
 
     // 3. El valor del dolar, en la misma respuesta: una consulta menos desde el sitio
     let config = null;
-    try {
-      const c = await fetch(`${RAW}/content/config/general.json`);
-      if (c.ok) config = await c.json();
-    } catch (e) { /* sin cotizacion el sitio ya sabe arreglarselas */ }
+    const cfgTxt = await fetchTexto(`${RAW}/content/config/general.json`);
+    if (cfgTxt) { try { config = JSON.parse(cfgTxt); } catch (e) { /* json roto: se ignora */ } }
 
     // Cache en el borde: GitHub recibe ~1 consulta por minuto sin importar cuanta
     // gente entre. stale-while-revalidate sirve la copia vieja mientras refresca,

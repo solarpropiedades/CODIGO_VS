@@ -1219,6 +1219,19 @@
       });
   }
 
+  // raw.githubusercontent devuelve 503 de vez en cuando (hipos del CDN). Un solo
+  // intento fallido dejaba la ficha en "Propiedad no encontrada", asi que se reintenta.
+  function fetchTextoConReintento(url, intentos) {
+    intentos = intentos || 3;
+    return fetch(url).then(function(r) {
+      if (r.ok) return r.text();
+      // 404 es definitivo (la propiedad no existe); el resto puede ser pasajero
+      if (r.status === 404 || intentos <= 1) throw new Error('http ' + r.status);
+      return new Promise(function(res) { setTimeout(res, 400); })
+        .then(function() { return fetchTextoConReintento(url, intentos - 1); });
+    });
+  }
+
   function catalogoAProps(d) {
     return d.propiedades.map(function(x) {
       var p = parseYAML(x.raw);
@@ -1756,11 +1769,16 @@
     var codigo = slug;
     var url = RAW + '/content/propiedades/' + encodeURIComponent(codigo) + '.md';
 
-  fetch(url)
-    .then(function(r) {
-      if (!r.ok) throw new Error('not found');
-      return r.text();   // raw devuelve el .md tal cual, sin base64
+  // Primero se busca en el catalogo, que ya viene cacheado desde Vercel: es una sola
+  // consulta, es la misma que usan las similares, y esquiva los 503 de raw. Si la
+  // propiedad no figura ahi, se pide el .md directo (con reintentos).
+  cargarCatalogo()
+    .then(function(d) {
+      var enCatalogo = d.propiedades.filter(function(x) { return x.slug === codigo; })[0];
+      if (enCatalogo) return enCatalogo.raw;
+      return fetchTextoConReintento(url);
     })
+    .catch(function() { return fetchTextoConReintento(url); })
     .then(function(text) {
       return parseYAML(text);
     })
