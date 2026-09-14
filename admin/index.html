@@ -277,20 +277,74 @@
       });
     }
 
-    function run() { injectCSS(); styleHeader(); applyRepeating(); }
+
+    /* ---- MINIATURAS DE LAS FOTOS ----
+       Decap 3 arma mal el src de las miniaturas (issue #7639): pega el blob URL
+       despues del path del admin y queda algo como /admin/blob:https:/uuid, que da
+       404 y se ve el icono de imagen rota. Como las fotos guardadas SI existen en el
+       sitio publico, se reapunta cada miniatura rota a su archivo real.
+
+       Se buscan las rutas /fotos/... en el texto del item (el summary del list las
+       muestra) y en los atributos, y se prueba en ese orden. */
+    var SITIO_PUBLICO = 'https://www.solarprop.com.ar';
+    var RE_FOTO = /\/?fotos\/[A-Za-z0-9._%()\/-]+?\.(?:jpe?g|png|webp|gif|avif|JPE?G|PNG|WEBP)/;
+
+    function rutaDeFoto(img) {
+      /* 1) el propio src puede traer la ruta adentro aunque este mal armado */
+      var propio = (img.getAttribute('src') || '') + ' ' + (img.getAttribute('alt') || '') +
+                   ' ' + (img.getAttribute('title') || '');
+      var m = propio.match(RE_FOTO);
+      if (m) return m[0];
+
+      /* 2) si no, se sube por los contenedores buscando el texto de la ruta */
+      var cont = img.parentElement;
+      for (var i = 0; i < 6 && cont; i++) {
+        m = (cont.textContent || '').match(RE_FOTO);
+        if (m) return m[0];
+        /* tambien en inputs ocultos y atributos del contenedor */
+        var inp = cont.querySelector && cont.querySelector('input[value*="fotos/"]');
+        if (inp) { m = (inp.value || '').match(RE_FOTO); if (m) return m[0]; }
+        cont = cont.parentElement;
+      }
+      return null;
+    }
+
+    function arreglarMiniaturas() {
+      Array.from(document.querySelectorAll('img')).forEach(function(img) {
+        if (img.getAttribute('data-solar-fix')) return;          /* ya resuelta */
+        var src = img.getAttribute('src') || '';
+
+        /* Rota = sin src, o con el blob mal concatenado, o ya fallo al cargar */
+        var malArmada = src.indexOf('blob:') > 0;                 /* blob: NO al inicio */
+        var vacia = !src;
+        var fallo = img.complete && img.naturalWidth === 0 && src;
+        if (!malArmada && !vacia && !fallo) return;
+
+        var ruta = rutaDeFoto(img);
+        if (!ruta) return;
+        if (ruta.charAt(0) !== '/') ruta = '/' + ruta;
+
+        img.setAttribute('data-solar-fix', '1');
+        img.src = SITIO_PUBLICO + ruta;
+        img.style.setProperty('object-fit', 'cover');
+        img.style.setProperty('background', '#f3f1e6');
+      });
+    }
+
+    function run() { injectCSS(); styleHeader(); applyRepeating(); arreglarMiniaturas(); }
 
     /* Observar solo el body, no el head (evita loop infinito) */
     var pending = false;
     new MutationObserver(function() {
       if (pending) return;
       pending = true;
-      setTimeout(function() { pending = false; styleHeader(); applyRepeating(); }, 150);
+      setTimeout(function() { pending = false; styleHeader(); applyRepeating(); arreglarMiniaturas(); }, 150);
     }).observe(document.body || document.documentElement, { childList:true, subtree:true });
 
     window.addEventListener('load', function() {
       setTimeout(function() { injectCSS(); run(); }, 100);
       [400,900,1800,3500].forEach(function(ms){ setTimeout(run,ms); });
-      setInterval(function(){ styleHeader(); applyRepeating(); }, 1000);
+      setInterval(function(){ styleHeader(); applyRepeating(); arreglarMiniaturas(); }, 1000);
     });
   })();
   </script>
