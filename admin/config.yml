@@ -170,16 +170,18 @@ collections:
         required: false
         hint: "Podés usar Enter para separar párrafos, - para listas, **negrita**, etc."
 
+      # Antes era 'widget: image' con multiple:true, pero en Decap 3 ese modo esta roto:
+      # no deja agregar una segunda foto y la miniatura queda como imagen rota
+      # (issue #7639: usa blob URLs que dan 404). Se cambia al patron oficial para
+      # galerias: una LISTA donde cada item es una imagen. Guarda el mismo YAML de
+      # siempre (una lista de rutas), asi que el sitio no necesita cambios.
       - label: "Fotos"
         name: fotos
-        widget: image
-        multiple: true
+        widget: list
         required: false
-        # default [] fuerza a Decap a tratar el campo como LISTA desde el principio.
-        # Sin esto, al subir UNA sola foto guardaba un texto suelto en vez de una lista
-        # y despues no dejaba agregar mas (bug conocido de Decap, issue #5812).
-        default: []
-        hint: "Podés seleccionar/arrastrar varias fotos a la vez. La primera es la principal."
+        summary: "{{fields.imagen}}"
+        field: { label: "Foto", name: imagen, widget: image }
+        hint: "Agregá las fotos de a una con el botón de abajo. La primera es la principal; podés arrastrarlas para cambiar el orden."
 
       - label: "Link Reel / Video"
         name: link_reel
