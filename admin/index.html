@@ -331,6 +331,52 @@
       });
     }
 
+
+    /* ---- SESION QUE NO SE VENCE ----
+       Netlify Identity entrega un token que dura 1 HORA. Cargar una propiedad
+       completa (fotos + descripcion + medidas) lleva mas que eso, asi que al
+       apretar Publicar el token ya estaba vencido y saltaba
+       "API_ERROR: Bad credentials", perdiendo el trabajo y dejando las fotos
+       colgadas en "Borrador".
+
+       Decap no renueva el token solo (issue #941). Aca se renueva de dos formas:
+       cada 20 minutos mientras el panel este abierto, y ademas justo antes de
+       publicar, que es el momento que importa. */
+
+    function renovarSesion(motivo) {
+      try {
+        var ni = window.netlifyIdentity;
+        if (!ni || !ni.currentUser) return Promise.resolve();
+        var u = ni.currentUser();
+        if (!u || typeof u.jwt !== 'function') return Promise.resolve();
+        return u.jwt(true).catch(function() {});   /* true = forzar renovacion */
+      } catch (e) { return Promise.resolve(); }
+    }
+
+    /* 1. Cada 20 minutos, para que la sesion no llegue nunca a la hora */
+    setInterval(function() { renovarSesion('periodico'); }, 20 * 60 * 1000);
+
+    /* 2. Justo antes de publicar: es el momento en que el token tiene que estar
+          fresco si o si. Se renueva en cuanto el mouse toca el boton, asi ya esta
+          listo cuando Decap manda el guardado. */
+    document.addEventListener('mouseover', function(e) {
+      var b = e.target && e.target.closest && e.target.closest('button, [role="button"]');
+      if (!b) return;
+      var t = (b.textContent || '').trim().toLowerCase();
+      if (t.indexOf('publicar') === -1 && t.indexOf('publish') === -1 &&
+          t.indexOf('guardar') === -1 && t.indexOf('save') === -1) return;
+      if (b.getAttribute('data-solar-jwt')) return;
+      b.setAttribute('data-solar-jwt', '1');
+      renovarSesion('pre-publicar');
+      setTimeout(function() { b.removeAttribute('data-solar-jwt'); }, 30000);
+    }, true);
+
+    /* 3. Al volver a la pestana despues de un rato (el caso tipico: se fue a
+          buscar las fotos y volvio media hora despues) */
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden) renovarSesion('volvio a la pestana');
+    });
+
     function run() { injectCSS(); styleHeader(); applyRepeating(); arreglarMiniaturas(); }
 
     /* Observar solo el body, no el head (evita loop infinito) */
