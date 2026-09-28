@@ -377,6 +377,118 @@
       if (!document.hidden) renovarSesion('volvio a la pestana');
     });
 
+
+    /* ---- LAS FOTOS SE ACHICAN ANTES DE SUBIRLAS ----
+       Las fotos de camara o celular pesan 2-3 MB (los PNG todavia mas). Subir 8
+       de esas tarda mas de los 60 segundos que aguanta Git Gateway, y el guardado
+       se corta con "Request timed out after 60 seconds": se pierde el trabajo y
+       las fotos quedan colgadas en "Borrador".
+
+       Aca se achican EN LA COMPUTADORA antes de mandarlas: lado mayor 1920px y
+       JPEG de calidad alta. Una foto de 3 MB queda en unos 250 KB (12 veces menos)
+       sin diferencia visible en pantalla, y de paso el sitio carga mas rapido. */
+
+    var FOTO_MAX_LADO = 1920;      /* suficiente para pantallas grandes */
+    var FOTO_CALIDAD  = 0.82;      /* JPEG: arriba de 0.8 no se nota la diferencia */
+    var FOTO_UMBRAL   = 400 * 1024; /* por debajo de 400 KB no vale la pena tocarla */
+
+    function comprimirImagen(file) {
+      return new Promise(function(resolve) {
+        /* Los SVG y los archivos ya livianos se dejan como estan */
+        if (!file || !/^image\//.test(file.type) || /svg/i.test(file.type) ||
+            file.size < FOTO_UMBRAL) return resolve(file);
+
+        var url = URL.createObjectURL(file);
+        var img = new Image();
+
+        img.onload = function() {
+          try {
+            URL.revokeObjectURL(url);
+            var w = img.naturalWidth, h = img.naturalHeight;
+            if (!w || !h) return resolve(file);
+
+            var escala = Math.min(1, FOTO_MAX_LADO / Math.max(w, h));
+            var cw = Math.max(1, Math.round(w * escala));
+            var ch = Math.max(1, Math.round(h * escala));
+
+            var cv = document.createElement('canvas');
+            cv.width = cw; cv.height = ch;
+            var ctx = cv.getContext('2d');
+            ctx.fillStyle = '#ffffff';          /* fondo por si el PNG es transparente */
+            ctx.fillRect(0, 0, cw, ch);
+            ctx.drawImage(img, 0, 0, cw, ch);
+
+            cv.toBlob(function(blob) {
+              /* Si por lo que sea quedo mas pesada, se manda la original */
+              if (!blob || blob.size >= file.size) return resolve(file);
+              var nombre = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+              try {
+                resolve(new File([blob], nombre, { type: 'image/jpeg', lastModified: Date.now() }));
+              } catch (e) { resolve(file); }
+            }, 'image/jpeg', FOTO_CALIDAD);
+          } catch (e) { resolve(file); }
+        };
+
+        img.onerror = function() { URL.revokeObjectURL(url); resolve(file); };
+        img.src = url;
+      });
+    }
+
+    /* Aviso mientras comprime, asi no parece colgado */
+    function avisoComprimiendo(mostrar, texto) {
+      var id = 'solar-aviso-comprimiendo';
+      var el = document.getElementById(id);
+      if (!mostrar) { if (el) el.remove(); return; }
+      if (!el) {
+        el = document.createElement('div');
+        el.id = id;
+        el.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);' +
+          'background:#36512B;color:#FFFCEB;padding:12px 22px;border-radius:8px;z-index:99999;' +
+          'font:600 14px/1.4 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.28)';
+        document.body.appendChild(el);
+      }
+      el.textContent = texto;
+    }
+
+    /* Se intercepta la seleccion de archivos ANTES de que Decap los tome (capture),
+       se reemplazan por las versiones livianas y se vuelve a disparar el evento. */
+    document.addEventListener('change', function(e) {
+      var inp = e.target;
+      if (!inp || inp.type !== 'file' || !inp.files || !inp.files.length) return;
+      if (inp.getAttribute('data-solar-listo')) {        /* ya procesado: que siga */
+        inp.removeAttribute('data-solar-listo');
+        return;
+      }
+      var archivos = Array.prototype.slice.call(inp.files);
+      var hayPesadas = archivos.some(function(f) {
+        return /^image\//.test(f.type) && !/svg/i.test(f.type) && f.size >= FOTO_UMBRAL;
+      });
+      if (!hayPesadas) return;                            /* nada que achicar */
+      if (typeof DataTransfer === 'undefined') return;    /* navegador viejo: se sube tal cual */
+
+      e.stopImmediatePropagation();
+      e.preventDefault();
+
+      avisoComprimiendo(true, 'Preparando ' + archivos.length +
+                        (archivos.length === 1 ? ' foto…' : ' fotos…'));
+
+      Promise.all(archivos.map(comprimirImagen)).then(function(nuevos) {
+        try {
+          var dt = new DataTransfer();
+          nuevos.forEach(function(f) { dt.items.add(f); });
+          inp.setAttribute('data-solar-listo', '1');
+          inp.files = dt.files;
+          avisoComprimiendo(false);
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (err) {
+          /* Si algo falla, se deja pasar la seleccion original */
+          avisoComprimiendo(false);
+          inp.setAttribute('data-solar-listo', '1');
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+    }, true);
+
     function run() { injectCSS(); styleHeader(); applyRepeating(); arreglarMiniaturas(); }
 
     /* Observar solo el body, no el head (evita loop infinito) */
