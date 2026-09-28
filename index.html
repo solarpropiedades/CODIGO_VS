@@ -955,6 +955,18 @@
     footer { background: var(--negro); border-top: 1px solid rgba(255,252,235,0.05); padding: 36px 56px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
     .footer-copy { font-size: 11px; font-weight: 300; color: rgba(255,252,235,0.22); letter-spacing: 0.04em; }
     .footer-links { display: flex; gap: 28px; list-style: none; }
+    /* Aviso legal del pie. Va en un renglon aparte, ancho completo y en letra
+       chica: tiene que estar visible (si no, no sirve como aviso) pero sin
+       competir con el resto del footer. Sin data-en a proposito: es un texto
+       legal argentino, no se traduce. */
+    .footer-legal {
+      flex-basis: 100%; order: 3;
+      margin-top: 4px; padding-top: 18px;
+      border-top: 1px solid rgba(255,252,235,0.07);
+      font-size: 10.5px; line-height: 1.7; font-weight: 300;
+      color: rgba(255,252,235,0.30); text-align: justify;
+      letter-spacing: 0.01em;
+    }
     .footer-links a { font-size: 11px; font-weight: 500; color: rgba(255,252,235,0.22); text-decoration: none; letter-spacing: 0.06em; transition: color 0.2s; }
     .footer-links a:hover { color: var(--acento); }
 
@@ -1938,7 +1950,7 @@
 
 <!-- FOOTER -->
 <footer>
-  <span class="footer-copy">© <span class="footer-year">2026</span> Solar Propiedades · Antonella Gutiérrez · Neuquén, Argentina</span>
+  <span class="footer-copy">© <span class="footer-year">2026</span> Solar Propiedades · Antonella Gutiérrez · Neuquén, Argentina · Todos los derechos reservados.</span>
   <ul class="footer-links">
     <li><a href="#inicio" data-en="Home">Inicio</a></li>
     <li><a href="#propiedades" data-en="Properties">Propiedades</a></li>
@@ -1946,6 +1958,7 @@
     <li><a href="#sobre" data-en="About us">Conócenos</a></li>
     <li><a href="#contacto" data-en="Contact">Contacto</a></li>
   </ul>
+  <p class="footer-legal">El presente sitio web reviste carácter estrictamente informativo y funciona como catálogo publicitario. La información exhibida referente a los inmuebles (medidas, superficies, características técnicas, valores de venta/alquiler, expensas y disponibilidad) es suministrada por los propietarios o terceros solicitantes, por lo que puede contener errores, omisiones o sufrir modificaciones y/o actualizaciones sin previo aviso. Las imágenes, renders, planos y material audiovisual son meramente ilustrativos y no poseen carácter ni valor contractual. Este sitio web no realiza operaciones de compraventa, alquiler ni corretaje inmobiliario en línea. Todas las operaciones inmobiliarias son intermediadas y concluidas exclusivamente por la profesional matriculada responsable. Los datos ingresados a través de los formularios de contacto son utilizados únicamente con el fin de responder a sus consultas y brindar asesoramiento comercial personalizado, conforme a lo establecido por la Ley de Protección de Datos Personales N.° 25.326.</p>
 </footer>
 <script>
   // El boton de WhatsApp no debe tapar el footer: cuando el footer entra en
